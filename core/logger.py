@@ -112,8 +112,14 @@ class VisualWriter():
             if self.npy_data:
                 for name, res in zip(results["name"], results["result"]):
                     np_img = res.numpy()
+                    img_type = name.split("_")[0]
+                    if img_type == "Process":
+                        continue
                     np.save(
-                        os.path.join(result_path, os.path.basename(name).split(".")[0] + ".npy"),
+                        os.path.join(
+                            result_path,
+                            os.path.basename(name).split(".")[0] + "_" + img_type + ".npy"
+                        ),
                         np_img
                     )
             else:

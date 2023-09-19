@@ -95,7 +95,7 @@ class Network(BaseNetwork):
         ret_arr = y_t
         for i in tqdm(reversed(range(0, self.num_timesteps)), desc='sampling loop time step', total=self.num_timesteps):
             t = torch.full((b,), i, device=y_cond.device, dtype=torch.long)
-            y_t = self.p_sample(y_t, t, y_cond=y_cond)
+            y_t = self.p_sample(y_t, t, y_cond=y_cond, clip_denoised=False)
             if mask is not None:
                 y_t = y_0*(1.-mask) + mask*y_t
             if i % sample_inter == 0:
