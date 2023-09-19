@@ -4,12 +4,13 @@ from PIL import Image
 import os
 import torch
 import numpy as np
+import sparse
 
 from .util.mask import (bbox2mask, brush_stroke_mask, get_irregular_mask, random_bbox, random_cropping_bbox)
 
 IMG_EXTENSIONS = [
     '.jpg', '.JPG', '.jpeg', '.JPEG',
-    '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP',
+    '.png', '.PNG', '.ppm', '.PPM', '.bmp', '.BMP', '.npz', '.npy'
 ]
 
 def is_image_file(filename):
@@ -173,4 +174,40 @@ class ColorizationDataset(data.Dataset):
     def __len__(self):
         return len(self.flist)
 
+
+class ExtrapolationDataset(data.Dataset):
+    def __init__(self, data_root, data_subdir, data_len=-1):
+        self.data_root = data_root
+        imgs  = make_dataset(os.path.join(data_root, data_subdir + "A"))
+        cond_imgs  = make_dataset(os.path.join(data_root, data_subdir + "B"))
+        assert len(imgs) == len(cond_imgs), "A and B dirs dont match"
+        if data_len > 0:
+            self.imgs = imgs[:int(data_len)]
+            self.cond_imgs = cond_imgs[:int(data_len)]
+        else:
+            self.imgs = imgs
+            self.cond_imgs = cond_imgs
+
+    def __getitem__(self, index):
+        ret = {}
+
+        # Using relevant channels of ND image
+        cond_img = sparse.load_npz(self.imgs[index]).todense()[:-1, 112:-112, 1488:2512]
+        cond_img = np.concatenate((cond_img[:4, :, :], cond_img[[-1], :, :]))
+        cond_img = torch.from_numpy(cond_img).float()
+
+        # Duplicate FD image along channels to ensure cond and gt have same number of channels
+        # The code expects this
+        gt_img = np.load(self.cond_imgs[index])[:, 112:-112, 1488:2512]
+        gt_img = np.concatenate([gt_img]*cond_img.size()[0])
+        gt_img = torch.from_numpy(gt_img).float()
+
+        ret['gt_image'] = gt_img
+        ret['cond_image'] = cond_img
+        ret['path'] = self.imgs[index]
+
+        return ret
+
+    def __len__(self):
+        return len(self.imgs)
 

@@ -17,9 +17,9 @@ def main_worker(gpu, ngpus_per_node, opt):
     if opt['distributed']:
         torch.cuda.set_device(int(opt['local_rank']))
         print('using GPU {} for training'.format(int(opt['local_rank'])))
-        torch.distributed.init_process_group(backend = 'nccl', 
+        torch.distributed.init_process_group(backend = 'nccl',
             init_method = opt['init_method'],
-            world_size = opt['world_size'], 
+            world_size = opt['world_size'],
             rank = opt['global_rank'],
             group_name='mtorch'
         )
@@ -30,7 +30,7 @@ def main_worker(gpu, ngpus_per_node, opt):
 
     ''' set logger '''
     phase_logger = InfoLogger(opt)
-    phase_writer = VisualWriter(opt, phase_logger)  
+    phase_writer = VisualWriter(opt, phase_logger, npy_data=True)
     phase_logger.info('Create the log file in directory {}.\n'.format(opt['path']['experiments_root']))
 
     '''set networks and dataset'''
@@ -60,8 +60,8 @@ def main_worker(gpu, ngpus_per_node, opt):
             model.test()
     finally:
         phase_writer.close()
-        
-        
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--config', type=str, default='config/colorization_mirflickr25k.json', help='JSON file for configuration')
@@ -74,7 +74,7 @@ if __name__ == '__main__':
     ''' parser configs '''
     args = parser.parse_args()
     opt = Praser.parse(args)
-    
+
     ''' cuda devices '''
     gpu_str = ','.join(str(x) for x in opt['gpu_ids'])
     os.environ['CUDA_VISIBLE_DEVICES'] = gpu_str
@@ -85,8 +85,8 @@ if __name__ == '__main__':
     if opt['distributed']:
         ngpus_per_node = len(opt['gpu_ids']) # or torch.cuda.device_count()
         opt['world_size'] = ngpus_per_node
-        opt['init_method'] = 'tcp://127.0.0.1:'+ args.port 
+        opt['init_method'] = 'tcp://127.0.0.1:'+ args.port
         mp.spawn(main_worker, nprocs=ngpus_per_node, args=(ngpus_per_node, opt))
     else:
-        opt['world_size'] = 1 
+        opt['world_size'] = 1
         main_worker(0, 1, opt)

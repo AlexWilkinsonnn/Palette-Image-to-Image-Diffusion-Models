@@ -4,6 +4,7 @@ import importlib
 from datetime import datetime
 import logging
 import pandas as pd
+import numpy as np
 
 import core.util as Util
 
@@ -30,7 +31,7 @@ class InfoLogger():
             def wrapper(info, *args, **kwargs):
                 print_info(info, *args, **kwargs)
             return wrapper
-    
+
     @staticmethod
     def setup_logger(logger_name, root, phase, level=logging.INFO, screen=False):
         """ set up logger """
@@ -48,11 +49,11 @@ class InfoLogger():
             l.addHandler(sh)
 
 class VisualWriter():
-    """ 
+    """
     use tensorboard to record visuals, support 'add_scalar', 'add_scalars', 'add_image', 'add_images', etc. funtion.
     Also integrated with save results function.
     """
-    def __init__(self, opt, logger):
+    def __init__(self, opt, logger, npy_data=False):
         log_dir = opt['path']['tb_logger']
         self.result_dir = opt['path']['results']
         enabled = opt['train']['tensorboard']
@@ -60,6 +61,8 @@ class VisualWriter():
 
         self.writer = None
         self.selected_module = ""
+
+        self.npy_data = npy_data
 
         if enabled and self.rank==0:
             log_dir = str(log_dir)
@@ -106,10 +109,18 @@ class VisualWriter():
 
         ''' get names and corresponding images from results[OrderedDict] '''
         try:
-            names = results['name']
-            outputs = Util.postprocess(results['result'])
-            for i in range(len(names)): 
-                Image.fromarray(outputs[i]).save(os.path.join(result_path, names[i]))
+            if self.npy_data:
+                for name, res in zip(results["name"], results["result"]):
+                    np_img = res.numpy()
+                    np.save(
+                        os.path.join(result_path, os.path.basename(name).split(".")[0] + ".npy"),
+                        np_img
+                    )
+            else:
+                names = results['name']
+                outputs = Util.postprocess(results['result'])
+                for i in range(len(names)):
+                    Image.fromarray(outputs[i]).save(os.path.join(result_path, names[i]))
         except:
             raise NotImplementedError('You must specify the context of name and result in save_current_results functions of model.')
 
@@ -117,7 +128,7 @@ class VisualWriter():
         self.writer.close()
         print('Close the Tensorboard SummaryWriter.')
 
-        
+
     def __getattr__(self, name):
         """
         If visualization is configured to use:
