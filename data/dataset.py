@@ -191,14 +191,20 @@ class ExtrapolationDataset(data.Dataset):
     def __getitem__(self, index):
         ret = {}
 
-        # Using relevant channels of ND image
-        cond_img = sparse.load_npz(self.imgs[index]).todense()[:-1, 112:-112, 1488:2512]
+        # Using relevant channels of ND image + try to pick a non empty crop (vertex is centered
+        # at 2000 ticks for this dataset so should be fine just to try different channels)
+        cond_img = sparse.load_npz(self.imgs[index]).todense()
+        for ch_low, ch_high, in [(112, -112), (None, 256), (-256, None)]:
+            cond_img_crop = cond_img[:-1, ch_low:ch_high, 1488:2512]
+            if cond_img_crop[0].sum() > 100:
+                break
+        cond_img = cond_img_crop
         cond_img = np.concatenate((cond_img[:4, :, :], cond_img[[-1], :, :]))
         cond_img = torch.from_numpy(cond_img).float()
-
+#
         # Duplicate FD image along channels to ensure cond and gt have same number of channels
         # The code expects this
-        gt_img = np.load(self.cond_imgs[index])[:, 112:-112, 1488:2512]
+        gt_img = np.load(self.cond_imgs[index])[:, ch_low:ch_high, 1488:2512]
         gt_img = np.concatenate([gt_img]*cond_img.size()[0])
         gt_img = torch.from_numpy(gt_img).float()
 
