@@ -27,8 +27,8 @@
             "dataloader":{
                 "validation_split": 3, // percent or number 
                 "args":{ // arguments to initialize train_dataloader
-                    "batch_size": 4, // batch size in each gpu
-                    "num_workers": 4,
+                    "batch_size": 1, // batch size in each gpu
+                    "num_workers": 1,
                     "shuffle": true,
                     "pin_memory": true,
                     "drop_last": true
@@ -121,7 +121,7 @@
             }
         ],
         "which_losses": [ // import designated list of losses without arguments
-            "mse_loss" // import mse_loss() function/class from default file (default is [models/losses.py]), equivalent to { "name": "mse_loss", "args":{}}
+            "l1_loss" // import mse_loss() function/class from default file (default is [models/losses.py]), equivalent to { "name": "mse_loss", "args":{}}
         ],
         "which_metrics": [ // import designated list of metrics without arguments
             "mae" // import mae() function/class from default file (default is [models/metrics.py]), equivalent to { "name": "mae", "args":{}}
